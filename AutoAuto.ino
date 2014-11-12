@@ -1,79 +1,176 @@
-//General autoAuto Project Code
-const int button = 2;
-const int led = 13;
-boolean vechicleState=false;
 
-enum lineStatus    //using enumeration to feed the movement function a direction
-{
-   forward,
-   left,
-   right
-};
+// AutoAuto Executive Control Program
+// November 2014
+
+// Obstacle Detection--------------------------
+#define DISTANCE_THRESHOLD_INCHES 12
+//TODO: Determine if pin 11 is the correct pin for the ultrasonic sensor 
+const int pingPin = 11;
+unsigned int duration, inches;
+
+// Vehicle Control-----------------------------
+// Used to control the speed of the left and right wheels
+const int leftWheels = A2;
+const int rightWheels = A3;
+
+const int MaxSpeedValue = 255;
+const int LowSpeedValue = 0; 
+const int NormalSpeed = MaxSpeedValue / 2;
+
+// Line Sensors--------------------------------
+const int leftLineSensorPin = 41;
+const int middleLineSensorPin = 42;
+const int rightLineSensorPin = 43;
+
+int leftLineSensorState = 0;
+int middleLineSensorState = 0;
+int rightLineSensorState = 0;
+
+#define FORWARD 0
+#define LEFT 1
+#define RIGHT 2
+#define ERROR 4
+
+boolean vehicleStarted = true;
 
 void setup() 
-{
-  // initialize the LED pin as an output:
-  pinMode(ledPin, OUTPUT);      
-  // initialize the pushbutton pin as an input:
-  pinMode(buttonPin, INPUT);     
+{  
+  // put your setup code here, to run once:
+  
+  // Line Sensors
+  pinMode(leftLineSensorPin, INPUT);
+  pinMode(middleLineSensorPin, INPUT);
+  pinMode(rightLineSensorPin, INPUT);
 }
 
-void loop()
+void loop() 
 {
-  // read the state of the pushbutton value:
-  buttonState = digitalRead(buttonPin);
-
-  // check if the pushbutton is pressed.
-  // if it is, the buttonState is HIGH:
-  if (buttonState == HIGH) 
-    {     
-    // turn LED on:    
-    digitalWrite(ledPin, HIGH); 
-     vehicalState=true;
+  // put your main code here, to run repeatedly: 
+   
+  // When pressed, start following the line
+  if (vehicleStarted)
+  {
+    // If obstacle is detected, stop vehicle and alert user
+    if (IsObstacleInWay())
+    {
+        StopVehicle();
+    }
+    else  // If no obstacle, follow line
+    {
+        int directionToMove = DetermineDirectionToMove();
+        if (directionToMove == FORWARD)
+        {
+            MoveForward();
+        }
+        else if (directionToMove == LEFT)
+        {
+            TurnLeft();
+        }
+        else if (directionToMove == RIGHT)
+        {
+            TurnRight();
+        }
+        else  // If off the line completely, stop vehicle and alert user
+        {
+            StopVehicle();           
+        }
+     }
      
-    } 
-  else 
-    {
-    // turn LED off:
-    digitalWrite(ledPin, LOW); //unneeded? LED already off
-    }
-   while(vehicalState==true)
-    {
-      if (obstacleDetected()==false)
-      {
-       //function that detects direction to move goes here
-        
-       //function that moves vehicle in specified direction
-       lineStatus lineDirection = lineFollower();
-       if(lineDirection==forward)
-          {
-              //move Forward
-          }       
-       if (lineDirection==left)
-         {
-           //Left Wheels High 
-         }
-       if(lineDirection==right)
-         {
-            //Right Wheels High
-         }
-       }
-    }
+     // TODO: Determine the value of the delay
+     delay(50);     
+   }    
 }
 
-lineStatus lineFollower()
+boolean IsObstacleInWay()
 {
-  //if(leftLineBool==false && rightLineBool==false)
-          //return forward;
-  //if( leftLineBool==false && rightLineBool==true)
-          // return right;
-  //if(leftLineBool==true && rightLineBool==false)
-          // return left;
+    pinMode(pingPin, OUTPUT);          // Set pin to OUTPUT
+    digitalWrite(pingPin, LOW);        // Ensure pin is low
+    delayMicroseconds(2);
+    digitalWrite(pingPin, HIGH);       // Start ranging
+    delayMicroseconds(5);              //   with 5 microsecond burst
+    digitalWrite(pingPin, LOW);        // End ranging
+    pinMode(pingPin, INPUT);           // Set pin to INPUT
+    duration = pulseIn(pingPin, HIGH); // Read echo pulse
+    
+    //TODO: Determine if these values are correct for the ultrasonic sensor
+    inches = duration / 74 / 2;        // Convert to inches based on sensor data
+           
+    if (inches < DISTANCE_THRESHOLD_INCHES)
+    {
+       return true;
+    }
+    else
+    {
+       return false;
+    }
 }
 
-/*void killEngine()
+int DetermineDirectionToMove()
+{
+   int returnValue;
+  
+   leftLineSensorState = digitalRead(leftLineSensorPin);
+   middleLineSensorState = digitalRead(middleLineSensorPin);
+   rightLineSensorState = digitalRead(rightLineSensorPin);
+   
+   // If over a black line, value is set to LOW
+   //               Left  Middle  Right
+   // Go forward -> HIGH LOW HIGH
+   // Go left ->    HIGH LOW LOW
+   // Go right ->   LOW LOW HIGH
+   // Error ->    Any other states
+   
+   if (leftLineSensorState == HIGH &&
+       middleLineSensorState == LOW &&
+       rightLineSensorState == HIGH)
    {
-     vehicalState=false;
-     //Stops power to the vehicle , and ends the loops
-    // Blinks LED/ LCD screen
-   }*/
+      returnValue = FORWARD;
+   } 
+   else if (leftLineSensorState == HIGH &&
+            middleLineSensorState == LOW &&
+            rightLineSensorState == LOW)
+   {
+      returnValue = LEFT;
+   }
+   else if (leftLineSensorState == LOW &&
+            middleLineSensorState == LOW &&
+            rightLineSensorState == HIGH)
+   {
+      returnValue = RIGHT;
+   }
+   else
+   {
+      returnValue = ERROR;
+   }
+   
+   return returnValue;
+}
+
+void StopVehicle()
+{
+   vehicleStarted = false;
+   analogWrite(rightWheels, LowSpeedValue);
+   analogWrite(leftWheels, LowSpeedValue);
+   // TODO: Blink LED light
+}
+
+void MoveForward()
+{
+    analogWrite(rightWheels, NormalSpeed);
+    analogWrite(leftWheels, NormalSpeed);
+}
+
+void TurnLeft()
+{
+    analogWrite(rightWheels, NormalSpeed);
+    analogWrite(leftWheels, NormalSpeed/2);
+}
+
+void TurnRight()
+{
+    analogWrite(rightWheels, NormalSpeed/2);
+    analogWrite(leftWheels, NormalSpeed);
+}
+
+
+
