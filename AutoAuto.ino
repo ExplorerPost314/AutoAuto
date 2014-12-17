@@ -1,17 +1,22 @@
 
 // AutoAuto Executive Control Program
-// November 2014
+// December 2014
+
+// LED Sensor
+const int ledPin = 12;
 
 // Obstacle Detection--------------------------
 #define DISTANCE_THRESHOLD_INCHES 12
-//TODO: Determine if pin 11 is the correct pin for the ultrasonic sensor 
-const int pingPin = 11;
+// TODO: Test ultrasonic sensor
+const int pingPin = 20;  // reset pin
+const int pingPwmPin = 7;
 unsigned int duration, inches;
+int sensorReadValue = 0;
 
 // Vehicle Control-----------------------------
 // Used to control the speed of the left and right wheels
-const int leftWheels = A2;
-const int rightWheels = A3;
+const int leftWheels = 2;
+const int rightWheels = 3;
 
 const int MaxSpeedValue = 255;
 const int LowSpeedValue = 0; 
@@ -36,11 +41,19 @@ boolean vehicleStarted = true;
 void setup() 
 {  
   // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(ledPin, OUTPUT);
   
   // Line Sensors
   pinMode(leftLineSensorPin, INPUT);
   pinMode(middleLineSensorPin, INPUT);
   pinMode(rightLineSensorPin, INPUT);
+  
+  //pingPin
+    //pingPwmPin
+    
+    pinMode(pingPwmPin, INPUT);
+    pinMode(pingPin, OUTPUT);
 }
 
 void loop() 
@@ -53,47 +66,62 @@ void loop()
     // If obstacle is detected, stop vehicle and alert user
     if (IsObstacleInWay())
     {
-        StopVehicle();
+        //StopVehicle();
     }
-    else  // If no obstacle, follow line
-    {
-        int directionToMove = DetermineDirectionToMove();
-        if (directionToMove == FORWARD)
-        {
-            MoveForward();
-        }
-        else if (directionToMove == LEFT)
-        {
-            TurnLeft();
-        }
-        else if (directionToMove == RIGHT)
-        {
-            TurnRight();
-        }
-        else  // If off the line completely, stop vehicle and alert user
-        {
-            StopVehicle();           
-        }
-     }
+//    else  // If no obstacle, follow line
+//    {
+//        int directionToMove = DetermineDirectionToMove();
+//        if (directionToMove == FORWARD)
+//        {
+//            MoveForward();
+//        }
+//        else if (directionToMove == LEFT)
+//        {
+//            TurnLeft();
+//        }
+//        else if (directionToMove == RIGHT)
+//        {
+//            TurnRight();
+//        }
+//        else  // If off the line completely, stop vehicle and alert user
+//        {
+//            StopVehicle();           
+//        }
+//     }
      
      // TODO: Determine the value of the delay
-     delay(50);     
-   }    
+     delay(200);     
+   }
+
+       
 }
 
 boolean IsObstacleInWay()
 {
-    pinMode(pingPin, OUTPUT);          // Set pin to OUTPUT
-    digitalWrite(pingPin, LOW);        // Ensure pin is low
-    delayMicroseconds(2);
-    digitalWrite(pingPin, HIGH);       // Start ranging
-    delayMicroseconds(5);              //   with 5 microsecond burst
-    digitalWrite(pingPin, LOW);        // End ranging
-    pinMode(pingPin, INPUT);           // Set pin to INPUT
-    duration = pulseIn(pingPin, HIGH); // Read echo pulse
+  
+//    pinMode(pingPin, OUTPUT);          // Set pin to OUTPUT
+//    digitalWrite(pingPin, LOW);        // Ensure pin is low
+//    delayMicroseconds(2);
+//    digitalWrite(pingPin, HIGH);       // Start ranging
+//    delayMicroseconds(5);              //   with 5 microsecond burst
+//    digitalWrite(pingPin, LOW);        // End ranging
+//    pinMode(pingPin, INPUT);           // Set pin to INPUT
+//    duration = pulseIn(pingPin, HIGH); // Read echo pulse
+//    
+//    //TODO: Determine if these values are correct for the ultrasonic sensor
+//    inches = duration / 74 / 2;        // Convert to inches based on sensor data
     
-    //TODO: Determine if these values are correct for the ultrasonic sensor
-    inches = duration / 74 / 2;        // Convert to inches based on sensor data
+    //pingPin
+    //pingPwmPin
+    
+    digitalWrite(pingPin, HIGH);
+    
+    delayMicroseconds(10);
+    
+    sensorReadValue = pulseIn(pingPwmPin, HIGH);
+           
+    digitalWrite(pingPin, LOW);       
+    Serial.println(sensorReadValue);            // Display result       
            
     if (inches < DISTANCE_THRESHOLD_INCHES)
     {
@@ -151,7 +179,8 @@ void StopVehicle()
    vehicleStarted = false;
    analogWrite(rightWheels, LowSpeedValue);
    analogWrite(leftWheels, LowSpeedValue);
-   // TODO: Blink LED light
+   
+   digitalWrite(ledPin, HIGH);
 }
 
 void MoveForward()
