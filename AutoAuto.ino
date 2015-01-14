@@ -1,4 +1,3 @@
-
 // AutoAuto Executive Control Program
 // January 2015
 
@@ -17,7 +16,7 @@ uint8_t EnPwmCmd[4]={0x44,0x02,0xbb,0x01}; // distance measure command
 const int leftWheels = 5;
 const int rightWheels = 4;
 const int leftWheelsEnable = 6;
-const int rightWheelEnable = 7;
+const int rightWheelsEnable = 7;
 
 const int MaxSpeedValue = 255;
 const int LowSpeedValue = 0; 
@@ -37,6 +36,13 @@ int rightLineSensorState = 0;
 #define RIGHT 2
 #define ERROR 4
 
+const int LineSensorFailThreshold = 3;
+const int LineSensorCountResetThreshold = 6;
+int lineSensorErrorReads = 0;
+int lineSensorReads = 0;
+
+// Other variables and constants----------------
+const int MainLoopDelay = 50;  // TODO: Determine the value of the delay
 boolean vehicleStarted = true;
 
 void setup() 
@@ -96,15 +102,28 @@ void loop()
             TurnRight();
             //Serial.println("Moving right");
         }
-        else  // If off the line completely, stop vehicle and alert user
+        else  
         {
-            //StopVehicle();    
-            //Serial.println("Off line completely!");       
+            // If off the line completely, stop vehicle and alert user.
+            // We want to perform a threshold check to account for false positives
+            lineSensorErrorReads++;
+            if (lineSensorErrorReads == LineSensorFailThreshold)
+            {
+               //StopVehicle();    
+               Serial.println("Off line completely!"); 
+            }
         }
      }
      
-     // TODO: Determine the value of the delay
-     delay(1000);     
+     // Reset sensor read and sensor error read counts when our threshold is reached
+     lineSensorReads++;
+     if (lineSensorReads == LineSensorCountResetThreshold)
+     {
+       lineSensorReads = 0;
+       lineSensorErrorReads = 0;
+     }
+     
+     delay(MainLoopDelay);
    }       
 }
 
