@@ -5,9 +5,9 @@
 const int ledPin = 12;
 
 // Obstacle Detection--------------------------
-#define DISTANCE_THRESHOLD_CM 40
+#define DISTANCE_THRESHOLD_CM 10
 const int pingTriggerPin = 20;
-const int pingPwmPin = 7;
+const int pingPwmPin = 3;
 unsigned int Distance = 0;
 uint8_t EnPwmCmd[4]={0x44,0x02,0xbb,0x01}; // distance measure command
 
@@ -20,7 +20,7 @@ const int rightWheelsEnable = 7;
 
 const int MaxSpeedValue = 255;
 const int LowSpeedValue = 0; 
-const int NormalSpeed = MaxSpeedValue / 2;
+const int NormalSpeed = 100;
 
 // Line Sensors--------------------------------
 const int leftLineSensorPin = 41;
@@ -42,7 +42,7 @@ int lineSensorErrorReads = 0;
 int lineSensorReads = 0;
 
 // Other variables and constants----------------
-const int MainLoopDelay = 50;  // TODO: Determine the value of the delay
+const int MainLoopDelay = 200;  // TODO: Determine the value of the delay
 boolean vehicleStarted = true;
 
 void setup() 
@@ -50,8 +50,8 @@ void setup()
   Serial.begin(9600);
   pinMode(ledPin, OUTPUT);
   
-  pinMode(leftWheelsEnable, OUTPUT);
-  pinMode(rightWheelsEnable, OUTPUT);
+  pinMode(leftWheels, OUTPUT);
+  pinMode(rightWheels, OUTPUT);
   
   // Line Sensors
   pinMode(leftLineSensorPin, INPUT);
@@ -66,11 +66,7 @@ void setup()
   for(int i=0; i<4; i++)
   {
     Serial.write(EnPwmCmd[i]);
-  }
-  
-  // Enable wheel enable/disable pins
-  digitalWrite(leftWheelsEnable, HIGH);
-  digitalWrite(rightWheelsEnable, HIGH);
+  }  
 }
 
 void loop() 
@@ -90,26 +86,27 @@ void loop()
         if (directionToMove == FORWARD)
         {
             MoveForward();
-            //Serial.println("Moving forward");
+            Serial.println("Moving forward");
         }
         else if (directionToMove == LEFT)
         {
             TurnLeft();
-            //Serial.println("Moving left");
+            Serial.println("Moving left");
         }
         else if (directionToMove == RIGHT)
         {
             TurnRight();
-            //Serial.println("Moving right");
+            Serial.println("Moving right");
         }
         else  
         {
+            Serial.println("Error case");
             // If off the line completely, stop vehicle and alert user.
             // We want to perform a threshold check to account for false positives
             lineSensorErrorReads++;
             if (lineSensorErrorReads == LineSensorFailThreshold)
             {
-               //StopVehicle();    
+               StopVehicle();    
                Serial.println("Off line completely!"); 
             }
         }
@@ -142,9 +139,9 @@ boolean IsObstacleInWay()
     {
       Distance = DistanceMeasured / 50; // every 50us low level stands for 1cm
     }
-    //Serial.print("Distance=");
-    //Serial.print(Distance);
-    //Serial.println("cm");       
+    Serial.print("Distance=");
+    Serial.print(Distance);
+    Serial.println("cm");       
            
     if (Distance < DISTANCE_THRESHOLD_CM)
     {
@@ -164,12 +161,12 @@ int DetermineDirectionToMove()
    middleLineSensorState = digitalRead(middleLineSensorPin);
    rightLineSensorState = digitalRead(rightLineSensorPin);
    
-   Serial.print("Left = ");
-   Serial.println(leftLineSensorState);
-   Serial.print("Center = ");
-   Serial.println(middleLineSensorState);
-   Serial.print("Right = ");
-   Serial.println(rightLineSensorState);
+//   Serial.print("Left = ");
+//   Serial.println(leftLineSensorState);
+//   Serial.print("Center = ");
+//   Serial.println(middleLineSensorState);
+//   Serial.print("Right = ");
+//   Serial.println(rightLineSensorState);
    
    // If over a black line, value is set to LOW
    //               Left  Middle  Right
@@ -184,15 +181,15 @@ int DetermineDirectionToMove()
    {
       returnValue = FORWARD;
    } 
-   else if (leftLineSensorState == HIGH &&
-            middleLineSensorState == LOW &&
-            rightLineSensorState == LOW)
+   else if (leftLineSensorState == LOW &&
+            middleLineSensorState == HIGH &&
+            rightLineSensorState == HIGH)
    {
       returnValue = LEFT;
    }
-   else if (leftLineSensorState == LOW &&
-            middleLineSensorState == LOW &&
-            rightLineSensorState == HIGH)
+   else if (leftLineSensorState == HIGH &&
+            middleLineSensorState == HIGH &&
+            rightLineSensorState == LOW)
    {
       returnValue = RIGHT;
    }
@@ -207,28 +204,44 @@ int DetermineDirectionToMove()
 void StopVehicle()
 {
    vehicleStarted = false;
-   analogWrite(rightWheels, LowSpeedValue);
-   analogWrite(leftWheels, LowSpeedValue);
-   
+   //analogWrite(rightWheels, LowSpeedValue);
+   //analogWrite(leftWheels, LowSpeedValue);
+   analogWrite(leftWheelsEnable, 0);
+   analogWrite(rightWheelsEnable, 0);
+    
    digitalWrite(ledPin, HIGH);
 }
 
 void MoveForward()
-{
-    analogWrite(rightWheels, NormalSpeed);
-    analogWrite(leftWheels, NormalSpeed);
+{ 
+    //analogWrite(rightWheels, NormalSpeed);
+    //analogWrite(leftWheels, NormalSpeed);
+    
+    digitalWrite(rightWheels, HIGH);
+    digitalWrite(leftWheels, HIGH);
+    analogWrite(leftWheelsEnable, NormalSpeed);
+    analogWrite(rightWheelsEnable, NormalSpeed);
 }
 
 void TurnLeft()
 {
-    analogWrite(rightWheels, NormalSpeed);
-    analogWrite(leftWheels, NormalSpeed/2);
+    //analogWrite(rightWheels, NormalSpeed);
+    //analogWrite(leftWheels, NormalSpeed/2);
+    
+    digitalWrite(rightWheels, HIGH);
+    digitalWrite(leftWheels, HIGH);
+    analogWrite(leftWheelsEnable, 5);
+    analogWrite(rightWheelsEnable, NormalSpeed);
 }
 
 void TurnRight()
 {
-    analogWrite(rightWheels, NormalSpeed/2);
-    analogWrite(leftWheels, NormalSpeed);
+    digitalWrite(rightWheels, HIGH);
+    digitalWrite(leftWheels, HIGH);
+    //analogWrite(rightWheels, NormalSpeed/2);
+    //analogWrite(leftWheels, NormalSpeed);
+    analogWrite(leftWheelsEnable, NormalSpeed);
+    analogWrite(rightWheelsEnable, 5);
 }
 
 
