@@ -1,22 +1,23 @@
 
 // AutoAuto Executive Control Program
-// December 2014
+// January 2015
 
 // LED Sensor
 const int ledPin = 12;
 
 // Obstacle Detection--------------------------
-#define DISTANCE_THRESHOLD_INCHES 12
-// TODO: Test ultrasonic sensor
-const int pingPin = 20;  // reset pin
+#define DISTANCE_THRESHOLD_CM 40
+const int pingTriggerPin = 20;
 const int pingPwmPin = 7;
-unsigned int duration, inches;
-int sensorReadValue = 0;
+unsigned int Distance = 0;
+uint8_t EnPwmCmd[4]={0x44,0x02,0xbb,0x01}; // distance measure command
 
 // Vehicle Control-----------------------------
 // Used to control the speed of the left and right wheels
-const int leftWheels = 2;
-const int rightWheels = 3;
+const int leftWheels = 5;
+const int rightWheels = 4;
+const int leftWheelsEnable = 6;
+const int rightWheelEnable = 7;
 
 const int MaxSpeedValue = 255;
 const int LowSpeedValue = 0; 
@@ -40,26 +41,34 @@ boolean vehicleStarted = true;
 
 void setup() 
 {  
-  // put your setup code here, to run once:
   Serial.begin(9600);
   pinMode(ledPin, OUTPUT);
+  
+  pinMode(leftWheelsEnable, OUTPUT);
+  pinMode(rightWheelsEnable, OUTPUT);
   
   // Line Sensors
   pinMode(leftLineSensorPin, INPUT);
   pinMode(middleLineSensorPin, INPUT);
   pinMode(rightLineSensorPin, INPUT);
   
-  //pingPin
-    //pingPwmPin
-    
-    pinMode(pingPwmPin, INPUT);
-    pinMode(pingPin, OUTPUT);
+  // Setup distance sensor
+  pinMode(pingTriggerPin, OUTPUT); // A low pull on pin COMP/TRIG
+  digitalWrite(pingTriggerPin, HIGH); // Set to HIGH
+  pinMode(pingPwmPin, INPUT); // Sending Enable PWM mode command
+  
+  for(int i=0; i<4; i++)
+  {
+    Serial.write(EnPwmCmd[i]);
+  }
+  
+  // Enable wheel enable/disable pins
+  digitalWrite(leftWheelsEnable, HIGH);
+  digitalWrite(rightWheelsEnable, HIGH);
 }
 
 void loop() 
-{
-  // put your main code here, to run repeatedly: 
-   
+{     
   // When pressed, start following the line
   if (vehicleStarted)
   {
@@ -67,63 +76,58 @@ void loop()
     if (IsObstacleInWay())
     {
         //StopVehicle();
+        Serial.println("OBSTACLE IN WAY!!");
     }
-//    else  // If no obstacle, follow line
-//    {
-//        int directionToMove = DetermineDirectionToMove();
-//        if (directionToMove == FORWARD)
-//        {
-//            MoveForward();
-//        }
-//        else if (directionToMove == LEFT)
-//        {
-//            TurnLeft();
-//        }
-//        else if (directionToMove == RIGHT)
-//        {
-//            TurnRight();
-//        }
-//        else  // If off the line completely, stop vehicle and alert user
-//        {
-//            StopVehicle();           
-//        }
-//     }
+    else  // If no obstacle, follow line
+    {
+        int directionToMove = DetermineDirectionToMove();
+        if (directionToMove == FORWARD)
+        {
+            MoveForward();
+            //Serial.println("Moving forward");
+        }
+        else if (directionToMove == LEFT)
+        {
+            TurnLeft();
+            //Serial.println("Moving left");
+        }
+        else if (directionToMove == RIGHT)
+        {
+            TurnRight();
+            //Serial.println("Moving right");
+        }
+        else  // If off the line completely, stop vehicle and alert user
+        {
+            //StopVehicle();    
+            //Serial.println("Off line completely!");       
+        }
+     }
      
      // TODO: Determine the value of the delay
-     delay(200);     
-   }
-
-       
+     delay(1000);     
+   }       
 }
 
 boolean IsObstacleInWay()
-{
-  
-//    pinMode(pingPin, OUTPUT);          // Set pin to OUTPUT
-//    digitalWrite(pingPin, LOW);        // Ensure pin is low
-//    delayMicroseconds(2);
-//    digitalWrite(pingPin, HIGH);       // Start ranging
-//    delayMicroseconds(5);              //   with 5 microsecond burst
-//    digitalWrite(pingPin, LOW);        // End ranging
-//    pinMode(pingPin, INPUT);           // Set pin to INPUT
-//    duration = pulseIn(pingPin, HIGH); // Read echo pulse
-//    
-//    //TODO: Determine if these values are correct for the ultrasonic sensor
-//    inches = duration / 74 / 2;        // Convert to inches based on sensor data
+{        
+    // a low pull on pin COMP/TRIG triggering a sensor reading
+    digitalWrite(pingTriggerPin, LOW);
+    digitalWrite(pingTriggerPin, HIGH); // reading Pin PWM will output pulses
+    unsigned long DistanceMeasured = pulseIn(pingPwmPin,LOW);
     
-    //pingPin
-    //pingPwmPin
-    
-    digitalWrite(pingPin, HIGH);
-    
-    delayMicroseconds(10);
-    
-    sensorReadValue = pulseIn(pingPwmPin, HIGH);
+    if(DistanceMeasured == 50000)
+    {   
+      Serial.println("Invalid"); // the reading is invalid
+    }
+    else
+    {
+      Distance = DistanceMeasured / 50; // every 50us low level stands for 1cm
+    }
+    //Serial.print("Distance=");
+    //Serial.print(Distance);
+    //Serial.println("cm");       
            
-    digitalWrite(pingPin, LOW);       
-    Serial.println(sensorReadValue);            // Display result       
-           
-    if (inches < DISTANCE_THRESHOLD_INCHES)
+    if (Distance < DISTANCE_THRESHOLD_CM)
     {
        return true;
     }
@@ -140,6 +144,13 @@ int DetermineDirectionToMove()
    leftLineSensorState = digitalRead(leftLineSensorPin);
    middleLineSensorState = digitalRead(middleLineSensorPin);
    rightLineSensorState = digitalRead(rightLineSensorPin);
+   
+   Serial.print("Left = ");
+   Serial.println(leftLineSensorState);
+   Serial.print("Center = ");
+   Serial.println(middleLineSensorState);
+   Serial.print("Right = ");
+   Serial.println(rightLineSensorState);
    
    // If over a black line, value is set to LOW
    //               Left  Middle  Right
