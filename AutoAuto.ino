@@ -1,11 +1,11 @@
 // AutoAuto Executive Control Program
-// January 2015
+// January 27, 2015
 
 // LED Sensor
 const int ledPin = 12;
 
 // Obstacle Detection--------------------------
-#define DISTANCE_THRESHOLD_CM 10
+#define DISTANCE_THRESHOLD_CM 15
 const int pingTriggerPin = 20;
 const int pingPwmPin = 3;
 unsigned int Distance = 0;
@@ -20,7 +20,7 @@ const int rightWheelsEnable = 7;
 
 const int MaxSpeedValue = 255;
 const int LowSpeedValue = 0; 
-const int NormalSpeed = 100;
+const int NormalSpeed = 90;
 
 // Line Sensors--------------------------------
 const int leftLineSensorPin = 41;
@@ -36,13 +36,18 @@ int rightLineSensorState = 0;
 #define RIGHT 2
 #define ERROR 4
 
-const int LineSensorFailThreshold = 3;
-const int LineSensorCountResetThreshold = 6;
+const int LineSensorFailThreshold = 8;
+const int LineSensorCountResetThreshold = 10;
 int lineSensorErrorReads = 0;
 int lineSensorReads = 0;
 
+const int DistanceSensorFailThreshold = 3;
+const int DistanceSensorCountResetThreshold = 5;
+int distanceSensorErrorReads = 0;
+int distanceSensorReads = 0;
+
 // Other variables and constants----------------
-const int MainLoopDelay = 200;  // TODO: Determine the value of the delay
+const int MainLoopDelay = 200;
 boolean vehicleStarted = true;
 
 void setup() 
@@ -75,12 +80,16 @@ void loop()
   if (vehicleStarted)
   {
     // If obstacle is detected, stop vehicle and alert user
-    if (IsObstacleInWay())
-    {
-        //StopVehicle();
-        Serial.println("OBSTACLE IN WAY!!");
-    }
-    else  // If no obstacle, follow line
+//    if (IsObstacleInWay())
+//    {
+//        distanceSensorErrorReads++;
+//        if (distanceSensorErrorReads == DistanceSensorFailThreshold)
+//        {
+//           StopVehicle();
+//           Serial.println("OBSTACLE IN WAY!!");
+//        }           
+//    }
+//    else  // If no obstacle, follow line
     {
         int directionToMove = DetermineDirectionToMove();
         if (directionToMove == FORWARD)
@@ -120,6 +129,13 @@ void loop()
        lineSensorErrorReads = 0;
      }
      
+     distanceSensorReads++;
+     if (distanceSensorReads == DistanceSensorCountResetThreshold)
+     {
+       distanceSensorReads = 0;
+       distanceSensorErrorReads = 0;
+     }
+          
      delay(MainLoopDelay);
    }       
 }
@@ -204,8 +220,7 @@ int DetermineDirectionToMove()
 void StopVehicle()
 {
    vehicleStarted = false;
-   //analogWrite(rightWheels, LowSpeedValue);
-   //analogWrite(leftWheels, LowSpeedValue);
+
    analogWrite(leftWheelsEnable, 0);
    analogWrite(rightWheelsEnable, 0);
     
@@ -214,34 +229,29 @@ void StopVehicle()
 
 void MoveForward()
 { 
-    //analogWrite(rightWheels, NormalSpeed);
-    //analogWrite(leftWheels, NormalSpeed);
-    
     digitalWrite(rightWheels, HIGH);
     digitalWrite(leftWheels, HIGH);
+    
     analogWrite(leftWheelsEnable, NormalSpeed);
     analogWrite(rightWheelsEnable, NormalSpeed);
 }
 
 void TurnLeft()
-{
-    //analogWrite(rightWheels, NormalSpeed);
-    //analogWrite(leftWheels, NormalSpeed/2);
-    
+{   
     digitalWrite(rightWheels, HIGH);
-    digitalWrite(leftWheels, HIGH);
-    analogWrite(leftWheelsEnable, 5);
+    digitalWrite(leftWheels, LOW);
+    
+    analogWrite(leftWheelsEnable, 50);
     analogWrite(rightWheelsEnable, NormalSpeed);
 }
 
 void TurnRight()
 {
-    digitalWrite(rightWheels, HIGH);
+    digitalWrite(rightWheels, LOW);
     digitalWrite(leftWheels, HIGH);
-    //analogWrite(rightWheels, NormalSpeed/2);
-    //analogWrite(leftWheels, NormalSpeed);
+
     analogWrite(leftWheelsEnable, NormalSpeed);
-    analogWrite(rightWheelsEnable, 5);
+    analogWrite(rightWheelsEnable, 50);
 }
 
 
