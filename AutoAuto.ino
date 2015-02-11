@@ -1,11 +1,11 @@
 // AutoAuto Executive Control Program
-// January 27, 2015
+// February 10, 2015
 
 // LED Sensor
 const int ledPin = 12;
 
 // Obstacle Detection--------------------------
-#define DISTANCE_THRESHOLD_CM 15
+#define DISTANCE_THRESHOLD_CM 20
 const int pingTriggerPin = 20;
 const int pingPwmPin = 3;
 unsigned int Distance = 0;
@@ -20,7 +20,7 @@ const int rightWheelsEnable = 7;
 
 const int MaxSpeedValue = 255;
 const int LowSpeedValue = 0; 
-const int NormalSpeed = 90;
+const int NormalSpeed = 100;
 
 // Line Sensors--------------------------------
 const int leftLineSensorPin = 41;
@@ -36,18 +36,19 @@ int rightLineSensorState = 0;
 #define RIGHT 2
 #define ERROR 4
 
-const int LineSensorFailThreshold = 8;
-const int LineSensorCountResetThreshold = 10;
+// Failure thresholds--------------------------
+const int LineSensorFailThreshold = 16;
+const int LineSensorCountResetThreshold = 20;
 int lineSensorErrorReads = 0;
 int lineSensorReads = 0;
 
-const int DistanceSensorFailThreshold = 3;
-const int DistanceSensorCountResetThreshold = 5;
+const int DistanceSensorFailThreshold = 6;
+const int DistanceSensorCountResetThreshold = 10;
 int distanceSensorErrorReads = 0;
 int distanceSensorReads = 0;
 
 // Other variables and constants----------------
-const int MainLoopDelay = 200;
+const int MainLoopDelay = 100;  // Sample size
 boolean vehicleStarted = true;
 
 void setup() 
@@ -80,16 +81,16 @@ void loop()
   if (vehicleStarted)
   {
     // If obstacle is detected, stop vehicle and alert user
-//    if (IsObstacleInWay())
-//    {
-//        distanceSensorErrorReads++;
-//        if (distanceSensorErrorReads == DistanceSensorFailThreshold)
-//        {
-//           StopVehicle();
-//           Serial.println("OBSTACLE IN WAY!!");
-//        }           
-//    }
-//    else  // If no obstacle, follow line
+    if (IsObstacleInWay())
+    {
+        distanceSensorErrorReads++;
+        if (distanceSensorErrorReads == DistanceSensorFailThreshold)
+        {
+           StopVehicle();
+           Serial.println("OBSTACLE IN WAY!!");
+        }           
+    }
+    else  // If no obstacle, follow line
     {
         int directionToMove = DetermineDirectionToMove();
         if (directionToMove == FORWARD)
@@ -187,8 +188,8 @@ int DetermineDirectionToMove()
    // If over a black line, value is set to LOW
    //               Left  Middle  Right
    // Go forward -> HIGH LOW HIGH
-   // Go left ->    HIGH LOW LOW
-   // Go right ->   LOW LOW HIGH
+   // Go left ->    LOW HIGH HIGH
+   // Go right ->   HIGH HIGH LOW
    // Error ->    Any other states
    
    if (leftLineSensorState == HIGH &&
@@ -241,7 +242,7 @@ void TurnLeft()
     digitalWrite(rightWheels, HIGH);
     digitalWrite(leftWheels, LOW);
     
-    analogWrite(leftWheelsEnable, 50);
+    analogWrite(leftWheelsEnable, 60);
     analogWrite(rightWheelsEnable, NormalSpeed);
 }
 
@@ -251,8 +252,6 @@ void TurnRight()
     digitalWrite(leftWheels, HIGH);
 
     analogWrite(leftWheelsEnable, NormalSpeed);
-    analogWrite(rightWheelsEnable, 50);
+    analogWrite(rightWheelsEnable, 60);
 }
-
-
 
